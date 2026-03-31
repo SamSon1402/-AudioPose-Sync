@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AudioPose-Sync — Audio-to-Motion Character Animation | Animaj</title>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --audio: #f97316;
+            --audio-glow: rgba(249,115,22,0.35);
+            --motion: #06b6d4;
+            --motion-glow: rgba(6,182,212,0.3);
+            --sync: #d946ef;
+            --sync-glow: rgba(217,70,239,0.3);
+            --ok: #22c55e;
+            --bg: #06060e;
+            --card: #0d0d1a;
+            --el: #161630;
+            --tx: #eef0f8;
+            --tx2: #8888aa;
+            --tx3: #4e4e6a;
+            --brd: #24243e;
+            --grad: linear-gradient(135deg, #f97316 0%, #d946ef 50%, #06b6d4 100%);
+        }
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:'Manrope',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;
+            background-image:radial-gradient(ellipse at 15% 85%,rgba(249,115,22,0.06) 0%,transparent 50%),
+            radial-gradient(ellipse at 85% 15%,rgba(217,70,239,0.04) 0%,transparent 50%),
+            radial-gradient(ellipse at 50% 50%,rgba(6,182,212,0.02) 0%,transparent 60%);}
+        .header{background:rgba(6,6,14,0.92);border-bottom:1px solid var(--brd);padding:0.6rem 2rem;position:sticky;top:0;z-index:100;backdrop-filter:blur(24px)}
+        .hc{max-width:1800px;margin:0 auto;display:flex;justify-content:space-between;align-items:center}
+        .logo{display:flex;align-items:center;gap:0.65rem}
+        .logo-i{width:40px;height:40px;background:var(--grad);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;box-shadow:0 0 18px var(--audio-glow)}
+        .logo-t{font-size:1.3rem;font-weight:800;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+        .logo-s{font-size:0.48rem;color:var(--tx3);text-transform:uppercase;letter-spacing:3px;font-weight:700}
+        .badges{display:flex;gap:0.3rem}
+        .badge{background:var(--card);border:1px solid var(--brd);padding:0.22rem 0.5rem;border-radius:5px;font-size:0.52rem;color:var(--tx2);font-family:'JetBrains Mono',monospace}
+        .badge.on{background:rgba(34,197,94,0.1);border-color:var(--ok);color:var(--ok)}
+
+        .main{max-width:1800px;margin:0 auto;padding:1rem 2rem}
+        .hero{text-align:center;margin-bottom:1rem}
+        .hero h1{font-size:1.9rem;font-weight:800;margin-bottom:0.2rem;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+        .hero p{color:var(--tx2);font-size:0.82rem}
+
+        .ws{display:grid;grid-template-columns:1fr 360px;gap:1rem}
+        @media(max-width:1200px){.ws{grid-template-columns:1fr}}
+        .card{background:var(--card);border:1px solid var(--brd);border-radius:14px;overflow:hidden}
+        .ch{padding:0.7rem 1rem;border-bottom:1px solid var(--brd);display:flex;align-items:center;justify-content:space-between;background:linear-gradient(180deg,rgba(22,22,48,0.5) 0%,transparent 100%)}
+        .ct{font-size:0.75rem;font-weight:700;display:flex;align-items:center;gap:0.4rem}
+        .cb{padding:1rem}
+
+        /* Waveform + Skeleton split view */
+        .split-view{display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;margin-bottom:0.8rem}
+        .panel{background:var(--bg);border:1px solid var(--brd);border-radius:10px;aspect-ratio:4/3;position:relative;overflow:hidden}
+        .panel-label{position:absolute;top:8px;left:10px;font-size:0.55rem;color:var(--tx3);font-family:'JetBrains Mono',monospace;z-index:2;background:rgba(0,0,0,0.5);padding:2px 6px;border-radius:4px}
+
+        /* Waveform */
+        .waveform-canvas{width:100%;height:100%}
+
+        /* Audio controls */
+        .audio-section{background:var(--el);border-radius:10px;padding:0.8rem;margin-bottom:0.8rem}
+        .audio-label{font-size:0.6rem;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:1px;margin-bottom:0.4rem}
+        .audio-presets{display:flex;gap:0.3rem;flex-wrap:wrap;margin-bottom:0.5rem}
+        .audio-preset{background:var(--bg);border:1px solid var(--brd);border-radius:8px;padding:0.4rem 0.7rem;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:0.3rem;font-family:'Manrope',sans-serif;font-size:0.65rem;color:var(--tx2)}
+        .audio-preset:hover{border-color:var(--audio);color:var(--audio)}
+        .audio-preset.active{border-color:var(--audio);background:rgba(249,115,22,0.12);color:var(--audio)}
+
+        /* Sync meter */
+        .sync-section{background:var(--el);border-radius:10px;padding:0.8rem;margin-bottom:0.8rem}
+        .sync-bars{display:flex;gap:2px;height:50px;align-items:flex-end}
+        .sync-bar{flex:1;background:var(--sync);border-radius:2px 2px 0 0;transition:height 0.1s;min-height:3px}
+
+        .ctrls{display:flex;gap:0.3rem;margin-bottom:0.8rem}
+        .btn{flex:1;padding:0.55rem;background:var(--el);border:1px solid var(--brd);border-radius:8px;color:var(--tx);font-family:'Manrope',sans-serif;font-size:0.65rem;font-weight:700;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:0.3rem}
+        .btn:hover{border-color:var(--audio)}
+        .btn.on{border-color:var(--audio);background:rgba(249,115,22,0.15);color:var(--audio)}
+
+        /* Prosody features */
+        .pros-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0.4rem;margin-bottom:0.5rem}
+        .pros-item{background:var(--bg);border-radius:8px;padding:0.5rem;text-align:center}
+        .pros-val{font-size:1rem;font-weight:800;font-family:'JetBrains Mono',monospace}
+        .pros-label{font-size:0.48rem;color:var(--tx3);text-transform:uppercase;letter-spacing:0.5px}
+
+        .sidebar{display:flex;flex-direction:column;gap:0.8rem}
+
+        /* Architecture */
+        .arch-flow{display:flex;flex-direction:column;gap:0.3rem}
+        .arch-block{background:var(--bg);border-radius:8px;padding:0.5rem 0.7rem;display:flex;align-items:center;gap:0.5rem;border-left:3px solid var(--audio)}
+        .arch-block:nth-child(2){border-left-color:var(--sync)}
+        .arch-block:nth-child(3){border-left-color:var(--motion)}
+        .arch-block:nth-child(4){border-left-color:var(--ok)}
+        .arch-icon{font-size:1rem}
+        .arch-name{font-size:0.65rem;font-weight:700}
+        .arch-desc{font-size:0.5rem;color:var(--tx3)}
+        .arch-arrow{text-align:center;color:var(--tx3);font-size:0.6rem}
+
+        /* Stats */
+        .stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:0.35rem}
+        .stat-box{background:var(--bg);border-radius:7px;padding:0.5rem;text-align:center}
+        .stat-v{font-size:1rem;font-weight:800;font-family:'JetBrains Mono',monospace;color:var(--audio)}
+        .stat-l{font-size:0.48rem;color:var(--tx3);text-transform:uppercase}
+
+        .gen-log{max-height:200px;overflow-y:auto}
+        .gen-item{background:var(--el);border-radius:7px;padding:0.45rem;margin-bottom:0.3rem;border-left:3px solid var(--ok);display:flex;gap:0.4rem;align-items:center;animation:si 0.3s ease;font-size:0.6rem}
+        @keyframes si{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
+
+        .loading-overlay{position:fixed;inset:0;background:rgba(6,6,14,0.97);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:1000}
+        .loading-overlay.active{display:flex}
+        .eq-bars{display:flex;gap:4px;align-items:flex-end;height:50px;margin-bottom:1.5rem}
+        .eq-bar{width:8px;background:var(--audio);border-radius:3px;animation:eq 0.8s ease-in-out infinite alternate}
+        .eq-bar:nth-child(1){height:20px;animation-delay:0s}
+        .eq-bar:nth-child(2){height:35px;animation-delay:0.1s;background:var(--sync)}
+        .eq-bar:nth-child(3){height:25px;animation-delay:0.2s}
+        .eq-bar:nth-child(4){height:45px;animation-delay:0.15s;background:var(--sync)}
+        .eq-bar:nth-child(5){height:15px;animation-delay:0.25s}
+        .eq-bar:nth-child(6){height:40px;animation-delay:0.05s;background:var(--motion)}
+        .eq-bar:nth-child(7){height:30px;animation-delay:0.2s}
+        @keyframes eq{to{height:50px}}
+        .l-text{font-size:0.85rem;font-weight:700;margin-bottom:0.3rem}
+        .l-sub{font-size:0.65rem;color:var(--tx3);font-family:'JetBrains Mono',monospace;margin-bottom:1rem}
+        .l-bar-c{width:200px;height:3px;background:var(--el);border-radius:2px;overflow:hidden}
+        .l-bar{height:100%;background:var(--grad);width:0%;transition:width 0.3s}
+
+        .toast{position:fixed;bottom:1.2rem;right:1.2rem;background:var(--card);border:1px solid var(--brd);border-radius:10px;padding:0.6rem 0.9rem;display:flex;align-items:center;gap:0.4rem;box-shadow:0 12px 40px rgba(0,0,0,0.6);transform:translateY(80px);opacity:0;transition:all 0.4s cubic-bezier(0.4,0,0.2,1);z-index:1000;font-size:0.7rem;font-weight:600}
+        .toast.show{transform:translateY(0);opacity:1}
+        ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--brd);border-radius:2px}
+    </style>
+</head>
+<body>
+    <header class="header"><div class="hc">
+        <div class="logo"><div class="logo-i">🔊</div><div><div class="logo-t">AudioPose-Sync</div><div class="logo-s">Animaj Deep Learning Research</div></div></div>
+        <div class="badges"><span class="badge on">Ready</span><span class="badge">Wav2Vec 2.0</span><span class="badge">Bi-LSTM</span><span class="badge">Snappy Motion</span><span class="badge">CUDA</span></div>
+    </div></header>
+
+    <main class="main">
+        <div class="hero"><h1>🔊 Audio-Driven Character Animation</h1><p>Speech prosody + music → full-body expressive motion on cartoon rigs with snappy, exaggerated timing</p></div>
+        <div class="ws">
+            <div>
+                <div class="card" style="margin-bottom:0.8rem">
+                    <div class="ch"><h3 class="ct">🎬 Audio → Motion Viewer</h3><span style="font-size:0.55rem;color:var(--tx3);font-family:'JetBrains Mono'" id="timeInfo">0:00 / 0:00</span></div>
+                    <div class="cb">
+                        <div class="split-view">
+                            <div class="panel">
+                                <div class="panel-label">🔊 Audio Waveform</div>
+                                <canvas class="waveform-canvas" id="waveCanvas"></canvas>
+                            </div>
+                            <div class="panel">
+                                <div class="panel-label">🦴 Skeleton Output</div>
+                                <svg id="skelSvg" width="100%" height="100%" style="position:absolute;inset:0"></svg>
+                                <div style="position:absolute;bottom:6px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.7);padding:2px 8px;border-radius:4px;font-size:0.55rem;font-family:'JetBrains Mono',monospace;color:var(--motion)" id="skelLabel">Pocoyo • Idle</div>
+                            </div>
+                        </div>
+                        <div class="audio-section">
+                            <div class="audio-label">🎵 Audio Input</div>
+                            <div class="audio-presets">
+                                <span class="audio-preset active" onclick="selectAudio(0,this)">🗣️ Dialogue (excited)</span>
+                                <span class="audio-preset" onclick="selectAudio(1,this)">🎶 Singalong melody</span>
+                                <span class="audio-preset" onclick="selectAudio(2,this)">🥁 Dance beat</span>
+                                <span class="audio-preset" onclick="selectAudio(3,this)">😢 Sad monologue</span>
+                                <span class="audio-preset" onclick="selectAudio(4,this)">😂 Laughter burst</span>
+                            </div>
+                        </div>
+                        <div class="sync-section">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.4rem">
+                                <span style="font-size:0.65rem;font-weight:700">🎯 Audio-Motion Sync Score</span>
+                                <span style="font-size:0.6rem;font-family:'JetBrains Mono',monospace;color:var(--ok)" id="syncScore">—</span>
+                            </div>
+                            <div class="sync-bars" id="syncBars"></div>
+                        </div>
+                        <div class="ctrls">
+                            <button class="btn" id="genBtn" onclick="generate()">⚡ Generate Motion</button>
+                            <button class="btn" id="playBtn" onclick="togglePlay()"><span id="pIcon">▶️</span> Play</button>
+                            <button class="btn" onclick="resetAll()">🔄 Reset</button>
+                            <button class="btn" onclick="toast('💾 Exported as FBX + WAV sync file')">💾 Export</button>
+                        </div>
+                        <div class="pros-grid">
+                            <div class="pros-item"><div class="pros-val" style="color:var(--audio)" id="pitchVal">—</div><div class="pros-label">Pitch (Hz)</div></div>
+                            <div class="pros-item"><div class="pros-val" style="color:var(--sync)" id="energyVal">—</div><div class="pros-label">Energy (dB)</div></div>
+                            <div class="pros-item"><div class="pros-val" style="color:var(--motion)" id="tempoVal">—</div><div class="pros-label">Tempo (BPM)</div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="sidebar">
+                <div class="card">
+                    <div class="ch"><h3 class="ct">🧠 Architecture</h3></div>
+                    <div class="cb">
+                        <div class="arch-flow">
+                            <div class="arch-block"><div class="arch-icon">🔊</div><div><div class="arch-name">Wav2Vec 2.0 Encoder</div><div class="arch-desc">Audio → prosody features (pitch, energy, rhythm)</div></div></div>
+                            <div class="arch-arrow">↓</div>
+                            <div class="arch-block"><div class="arch-icon">🔗</div><div><div class="arch-name">Cross-Attention Fusion</div><div class="arch-desc">Audio features × character rig embedding</div></div></div>
+                            <div class="arch-arrow">↓</div>
+                            <div class="arch-block"><div class="arch-icon">🧠</div><div><div class="arch-name">Bi-LSTM Motion Decoder</div><div class="arch-desc">Temporal motion w/ snappy style constraint</div></div></div>
+                            <div class="arch-arrow">↓</div>
+                            <div class="arch-block"><div class="arch-icon">🦴</div><div><div class="arch-name">Rig Controller Output</div><div class="arch-desc">18 joints × 3 DOF per frame → Maya/FBX</div></div></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="ch"><h3 class="ct">📊 Model Stats</h3></div>
+                    <div class="cb">
+                        <div class="stat-grid">
+                            <div class="stat-box"><div class="stat-v" id="sInfer">—</div><div class="stat-l">Inference (ms)</div></div>
+                            <div class="stat-box"><div class="stat-v">770K</div><div class="stat-l">Training Frames</div></div>
+                            <div class="stat-box"><div class="stat-v">256</div><div class="stat-l">Hidden Dim</div></div>
+                            <div class="stat-box"><div class="stat-v">18×3</div><div class="stat-l">Output DOF</div></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="ch"><h3 class="ct">📋 Log</h3><span style="font-size:0.5rem;color:var(--tx3)" id="lc">0</span></div>
+                    <div class="cb"><div class="gen-log" id="glog"><div style="color:var(--tx3);font-size:0.65rem;text-align:center;padding:0.8rem">Generate motion to see log</div></div></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div class="loading-overlay" id="lo">
+        <div class="eq-bars"><div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div></div>
+        <div class="l-text">Processing Audio → Motion...</div>
+        <div class="l-sub" id="lSub">Extracting prosody features...</div>
+        <div class="l-bar-c"><div class="l-bar" id="lBar"></div></div>
+    </div>
+    <div class="toast" id="toastEl"></div>
+
+    <script>
+        let playing=false,anim=null,frame=0,totalF=90,motion=null,logN=0,selectedAudio=0;
+        const audioNames=['Dialogue (excited)','Singalong melody','Dance beat','Sad monologue','Laughter burst'];
+        const audioProps=[[280,72,120],[220,65,128],[180,80,140],[150,45,80],[320,85,110]];
+
+        function init(){initSyncBars();renderSkel();}
+
+        function initSyncBars(){
+            const c=document.getElementById('syncBars');
+            let h='';for(let i=0;i<30;i++)h+=`<div class="sync-bar" style="height:3px;"></div>`;
+            c.innerHTML=h;
+        }
+
+        function renderSkel(offsets){
+            const svg=document.getElementById('skelSvg');
+            const w=svg.clientWidth||400,h=svg.clientHeight||300;
+            const joints=[{x:50,y:18},{x:50,y:30},{x:50,y:45},{x:50,y:58},{x:36,y:33},{x:24,y:40},{x:16,y:48},{x:64,y:33},{x:76,y:40},{x:84,y:48},{x:42,y:60},{x:38,y:72},{x:36,y:84},{x:58,y:60},{x:62,y:72},{x:64,y:84}];
+            const bones=[[0,1],[1,2],[2,3],[1,4],[4,5],[5,6],[1,7],[7,8],[8,9],[3,10],[10,11],[11,12],[3,13],[13,14],[14,15]];
+            let s='';
+            bones.forEach(([a,b])=>{
+                let ax=joints[a].x/100*w,ay=joints[a].y/100*h,bx=joints[b].x/100*w,by=joints[b].y/100*h;
+                if(offsets){ax+=offsets[a].dx;ay+=offsets[a].dy;bx+=offsets[b].dx;by+=offsets[b].dy;}
+                s+=`<line x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}" stroke="#06b6d4" stroke-width="2.5" opacity="0.6"/>`;
+            });
+            joints.forEach((j,i)=>{
+                let jx=j.x/100*w,jy=j.y/100*h;
+                if(offsets){jx+=offsets[i].dx;jy+=offsets[i].dy;}
+                const r=i===0?7:4;
+                const col=i===0?'#f97316':'#d946ef';
+                s+=`<circle cx="${jx}" cy="${jy}" r="${r}" fill="${col}"/>`;
+            });
+            svg.innerHTML=s;
+        }
+
+        function selectAudio(idx,el){
+            selectedAudio=idx;
+            document.querySelectorAll('.audio-preset').forEach(e=>e.classList.remove('active'));
+            el.classList.add('active');
+            toast(`🎵 Selected: ${audioNames[idx]}`);
+        }
+
+        function generate(){
+            const ol=document.getElementById('lo'),bar=document.getElementById('lBar'),sub=document.getElementById('lSub');
+            ol.classList.add('active');
+            const stages=['Extracting prosody features via Wav2Vec 2.0...','Computing pitch contour & energy envelope...','Cross-attention fusion with Pocoyo rig...','Bi-LSTM motion decoding (snappy style)...','Applying rig constraints & collision avoidance...','Rendering output keyframes...'];
+            let p=0,si=0;
+            const iv=setInterval(()=>{
+                p+=Math.random()*16+6;if(p>100)p=100;bar.style.width=p+'%';
+                const ns=Math.floor((p/100)*stages.length);
+                if(ns!==si&&ns<stages.length){si=ns;sub.textContent=stages[si];}
+                if(p>=100){clearInterval(iv);setTimeout(()=>{ol.classList.remove('active');bar.style.width='0%';onGenerated();},300);}
+            },55);
+        }
+
+        function onGenerated(){
+            const props=audioProps[selectedAudio];
+            document.getElementById('pitchVal').textContent=props[0];
+            document.getElementById('energyVal').textContent=props[1];
+            document.getElementById('tempoVal').textContent=props[2];
+            const inf=(350+Math.random()*250).toFixed(0);
+            document.getElementById('sInfer').textContent=inf;
+            document.getElementById('syncScore').textContent=(88+Math.random()*10).toFixed(1)+'%';
+
+            // Generate motion
+            motion=[];
+            const energy=props[1]/100;
+            for(let f=0;f<totalF;f++){
+                const t=f/totalF;
+                const offsets=[];
+                for(let j=0;j<16;j++){
+                    const amp=(j===0?5:j<4?10:16)*energy;
+                    offsets.push({
+                        dx:Math.sin(t*Math.PI*(4+selectedAudio)+j*0.8)*amp+Math.cos(t*Math.PI*2)*amp*0.3,
+                        dy:Math.cos(t*Math.PI*(3+selectedAudio*0.5)+j*0.6)*amp*0.7
+                    });
+                }
+                motion.push(offsets);
+            }
+
+            // Sync bars
+            document.querySelectorAll('.sync-bar').forEach((b,i)=>{
+                const h=10+Math.random()*40;
+                b.style.height=h+'px';
+                b.style.background=h>30?'var(--ok)':h>20?'var(--audio)':'var(--sync)';
+            });
+
+            // Log
+            logN++;
+            const log=document.getElementById('glog');
+            if(logN===1)log.innerHTML='';
+            const e=document.createElement('div');
+            e.className='gen-item';
+            e.innerHTML=`<span>✅</span><div style="flex:1"><strong>${audioNames[selectedAudio]}</strong><br><span style="font-size:0.5rem;color:var(--tx3)">${totalF} frames • ${inf}ms</span></div>`;
+            log.insertBefore(e,log.firstChild);
+            document.getElementById('lc').textContent=logN;
+            document.getElementById('skelLabel').textContent=`Pocoyo • ${audioNames[selectedAudio]}`;
+
+            startPlay();
+            toast(`✅ Motion generated: ${totalF} frames in ${inf}ms`);
+        }
+
+        function startPlay(){
+            playing=true;
+            document.getElementById('pIcon').textContent='⏸️';
+            document.getElementById('playBtn').classList.add('on');
+            function loop(){
+                if(!playing||!motion)return;
+                frame=(frame+1)%totalF;
+                renderSkel(motion[frame]);
+                drawWave(frame);
+                document.getElementById('timeInfo').textContent=`${(frame/24).toFixed(1)}s / ${(totalF/24).toFixed(1)}s`;
+                anim=requestAnimationFrame(loop);
+            }
+            loop();
+        }
+
+        function drawWave(f){
+            const canvas=document.getElementById('waveCanvas');
+            const ctx=canvas.getContext('2d');
+            canvas.width=canvas.clientWidth;canvas.height=canvas.clientHeight;
+            const w=canvas.width,h=canvas.height;
+            ctx.clearRect(0,0,w,h);
+            // Background bars
+            const barW=w/totalF;
+            for(let i=0;i<totalF;i++){
+                const amp=0.3+0.7*Math.abs(Math.sin(i*0.15+selectedAudio));
+                const barH=amp*h*0.7;
+                ctx.fillStyle=i===f?'#f97316':i<f?'rgba(249,115,22,0.3)':'rgba(249,115,22,0.1)';
+                ctx.fillRect(i*barW,h/2-barH/2,Math.max(barW-1,1),barH);
+            }
+            // Playhead
+            ctx.strokeStyle='#d946ef';ctx.lineWidth=2;
+            ctx.beginPath();ctx.moveTo(f*barW,0);ctx.lineTo(f*barW,h);ctx.stroke();
+        }
+
+        function togglePlay(){
+            if(playing){playing=false;document.getElementById('pIcon').textContent='▶️';document.getElementById('playBtn').classList.remove('on');if(anim)cancelAnimationFrame(anim);}
+            else if(motion)startPlay();
+        }
+
+        function resetAll(){
+            playing=false;if(anim)cancelAnimationFrame(anim);motion=null;frame=0;
+            document.getElementById('pIcon').textContent='▶️';document.getElementById('playBtn').classList.remove('on');
+            document.getElementById('pitchVal').textContent='—';document.getElementById('energyVal').textContent='—';document.getElementById('tempoVal').textContent='—';
+            document.getElementById('sInfer').textContent='—';document.getElementById('syncScore').textContent='—';document.getElementById('skelLabel').textContent='Pocoyo • Idle';
+            document.getElementById('timeInfo').textContent='0:00 / 0:00';
+            renderSkel();initSyncBars();
+            const canvas=document.getElementById('waveCanvas');const ctx=canvas.getContext('2d');canvas.width=canvas.clientWidth;ctx.clearRect(0,0,canvas.width,canvas.height);
+            toast('🔄 Reset complete');
+        }
+
+        function toast(msg){const t=document.getElementById('toastEl');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+        init();
+    </script>
+</body>
+</html>
